@@ -39,7 +39,8 @@ import androidx.compose.ui.unit.dp
 fun AlbumsArtistsScreen(
     tracks: List<LocalTrack>,
     onTrackClick: (LocalTrack) -> Unit,
-    onAlbumClick: (Album) -> Unit
+    onAlbumClick: (Album) -> Unit,
+    onArtistClick: (Artist) -> Unit
 ) {
     var tab by remember { mutableIntStateOf(0) }
     val albums = remember(tracks) { tracks.toAlbums() }
@@ -51,7 +52,6 @@ fun AlbumsArtistsScreen(
             Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Albums") })
             Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Artists") })
         }
-
         if (tab == 0) {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
@@ -59,15 +59,16 @@ fun AlbumsArtistsScreen(
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
-                items(albums, key = { it.key }) { album ->
-                    AlbumCard(album) { onAlbumClick(album) }
-                }
+                items(albums, key = { it.key }) { album -> AlbumCard(album) { onAlbumClick(album) } }
             }
         } else {
             LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 items(artists, key = { it.name }) { artist ->
-                    Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        BoxIcon()
+                    Row(
+                        Modifier.fillMaxWidth().clickable { onArtistClick(artist) }.padding(vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AlbumArtwork(artist.artworkUri, artist.name, Modifier.size(58.dp).clip(RoundedCornerShape(16.dp)))
                         Column(Modifier.padding(start = 14.dp)) {
                             Text(artist.name, style = MaterialTheme.typography.titleMedium)
                             Text("${artist.trackCount} songs", style = MaterialTheme.typography.bodySmall)
@@ -82,23 +83,9 @@ fun AlbumsArtistsScreen(
 @Composable
 private fun AlbumCard(album: Album, onClick: () -> Unit) {
     Column(Modifier.clickable(onClick = onClick)) {
-        AlbumArtwork(
-            artworkUri = album.artworkUri,
-            contentDescription = album.title,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(165.dp)
-                .clip(RoundedCornerShape(18.dp))
-        )
+        AlbumArtwork(album.artworkUri, album.title, Modifier.fillMaxWidth().height(165.dp).clip(RoundedCornerShape(18.dp)))
         Spacer(Modifier.height(8.dp))
         Text(album.title, style = MaterialTheme.typography.titleMedium, maxLines = 1)
         Text(album.artist, style = MaterialTheme.typography.bodySmall, maxLines = 1)
-    }
-}
-
-@Composable
-private fun BoxIcon(modifier: Modifier = Modifier.size(58.dp)) {
-    Column(modifier.clip(RoundedCornerShape(18.dp)).background(MaterialTheme.colorScheme.surfaceVariant), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Icon(Icons.Default.MusicNote, null, Modifier.size(30.dp), tint = Color.Gray)
     }
 }
