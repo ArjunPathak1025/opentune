@@ -10,5 +10,7 @@ data class Album(
 
 data class Artist(
     val name: String,
-    val trackCount: Int
+    val trackCount: Int,
+    val artworkUri: String?,
+    val tracks: List<LocalTrack>
 )
