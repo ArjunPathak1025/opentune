@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -50,7 +51,7 @@ fun NowPlayingScreen(
     onTogglePlay: () -> Unit,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
-    onSeek: (Long) -> Unit,
+    onSeekFraction: (Float) -> Unit,
     onShuffle: (Boolean) -> Unit,
     onRepeat: (Int) -> Unit,
     onOpenQueue: () -> Unit
@@ -68,10 +69,7 @@ fun NowPlayingScreen(
         onRepeat(repeatMode)
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 22.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
+    Column(Modifier.fillMaxSize().padding(horizontal = 22.dp, vertical = 18.dp), verticalArrangement = Arrangement.SpaceBetween) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") }
             Text("Now Playing", Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
@@ -79,44 +77,22 @@ fun NowPlayingScreen(
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Spacer(Modifier.size(16.dp))
-            AlbumArtwork(
-                artworkUri = artworkUri,
-                contentDescription = title,
-                modifier = Modifier.fillMaxWidth().size(320.dp).clip(RoundedCornerShape(32.dp))
-            )
+            AlbumArtwork(artworkUri, title, Modifier.fillMaxWidth().size(320.dp).clip(RoundedCornerShape(32.dp)))
             Spacer(Modifier.size(26.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(title, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                    Text(artist, style = MaterialTheme.typography.bodyLarge)
-                }
+                Column(Modifier.weight(1f)) { Text(title, fontSize = 24.sp, fontWeight = FontWeight.Bold); Text(artist, style = MaterialTheme.typography.bodyLarge) }
                 IconButton(onClick = {}) { Icon(Icons.Default.FavoriteBorder, "Favorite") }
             }
-            Slider(
-                value = progress,
-                onValueChange = { progress = it },
-                onValueChangeFinished = { onSeek((progress * 1000L * 60L * 4L)) },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Seek", style = MaterialTheme.typography.labelSmall)
-                Text("Queue controls below", style = MaterialTheme.typography.labelSmall)
-            }
+            Slider(value = progress, onValueChange = { progress = it }, onValueChangeFinished = { onSeekFraction(progress) }, modifier = Modifier.fillMaxWidth())
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("Seek", style = MaterialTheme.typography.labelSmall); Text("Queue controls below", style = MaterialTheme.typography.labelSmall) }
         }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
             IconButton(onClick = onOpenQueue) { Icon(Icons.Default.QueueMusic, "Queue") }
-            IconButton(onClick = {
-                shuffleEnabled = !shuffleEnabled
-                onShuffle(shuffleEnabled)
-            }) { Icon(Icons.Default.Shuffle, "Shuffle", tint = if (shuffleEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface) }
+            IconButton(onClick = { shuffleEnabled = !shuffleEnabled; onShuffle(shuffleEnabled) }) { Icon(Icons.Default.Shuffle, "Shuffle", tint = if (shuffleEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface) }
             IconButton(onClick = onPrevious) { Icon(Icons.Default.FastRewind, "Previous") }
-            IconButton(onClick = onTogglePlay, modifier = Modifier.size(72.dp)) {
-                Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, "Play or pause", modifier = Modifier.size(42.dp))
-            }
+            IconButton(onClick = onTogglePlay, modifier = Modifier.size(72.dp)) { Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, "Play or pause", modifier = Modifier.size(42.dp)) }
             IconButton(onClick = onNext) { Icon(Icons.Default.FastForward, "Next") }
-            IconButton(onClick = ::cycleRepeat) {
-                Icon(Icons.Default.Repeat, if (repeatMode == PlayerController.REPEAT_ONE) "Repeat one" else "Repeat", tint = if (repeatMode != PlayerController.REPEAT_OFF) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
-            }
+            IconButton(onClick = ::cycleRepeat) { Icon(Icons.Default.Repeat, "Repeat", tint = if (repeatMode != PlayerController.REPEAT_OFF) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface) }
         }
     }
 }
