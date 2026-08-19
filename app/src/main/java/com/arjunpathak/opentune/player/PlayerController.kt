@@ -55,6 +55,41 @@ class PlayerController(context: Context) {
     fun setRepeatMode(mode: Int) = withController { it.repeatMode = mode }
     fun currentPosition(onResult: (Long) -> Unit) = withController { onResult(it.currentPosition) }
     fun duration(onResult: (Long) -> Unit) = withController { onResult(it.duration.coerceAtLeast(0L)) }
+
+    fun queue(onResult: (items: List<Track>, currentIndex: Int) -> Unit) = withController { controller ->
+        val items = (0 until controller.mediaItemCount).map { index ->
+            val metadata = controller.getMediaItemAt(index).mediaMetadata
+            Track(
+                id = controller.getMediaItemAt(index).mediaId,
+                title = metadata.title?.toString().orEmpty(),
+                artist = metadata.artist?.toString().orEmpty(),
+                album = metadata.albumTitle?.toString().orEmpty(),
+                uri = controller.getMediaItemAt(index).localConfiguration?.uri?.toString().orEmpty(),
+                artworkUri = metadata.artworkUri?.toString()
+            )
+        }
+        onResult(items, controller.currentMediaItemIndex)
+    }
+
+    fun playQueueItem(index: Int) = withController { controller ->
+        if (index in 0 until controller.mediaItemCount) {
+            controller.seekTo(index, 0L)
+            controller.play()
+        }
+    }
+
+    fun removeQueueItem(index: Int) = withController { controller ->
+        if (index in 0 until controller.mediaItemCount) controller.removeMediaItem(index)
+    }
+
+    fun moveQueueItem(from: Int, to: Int) = withController { controller ->
+        if (from in 0 until controller.mediaItemCount && to in 0 until controller.mediaItemCount && from != to) {
+            controller.moveMediaItem(from, to)
+        }
+    }
+
+    fun clearQueue() = withController { it.clearMediaItems() }
+
     fun release() = MediaController.releaseFuture(controllerFuture)
 
     companion object {
