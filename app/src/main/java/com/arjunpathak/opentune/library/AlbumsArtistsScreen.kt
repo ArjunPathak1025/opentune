@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -82,7 +81,14 @@ fun AlbumsArtistsScreen(
 @Composable
 private fun AlbumCard(album: Album, onClick: () -> Unit) {
     Column(Modifier.clickable(onClick = onClick)) {
-        BoxIcon(Modifier.fillMaxWidth().height(165.dp))
+        AlbumArtwork(
+            artworkUri = album.artworkUri,
+            contentDescription = album.title,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(165.dp)
+                .clip(RoundedCornerShape(18.dp))
+        )
         Spacer(Modifier.height(8.dp))
         Text(album.title, style = MaterialTheme.typography.titleMedium, maxLines = 1)
         Text(album.artist, style = MaterialTheme.typography.bodySmall, maxLines = 1)
