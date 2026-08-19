@@ -46,6 +46,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -60,6 +61,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import com.arjunpathak.opentune.library.LocalLibraryScreen
+import com.arjunpathak.opentune.library.LocalTrack
 import com.arjunpathak.opentune.model.Track
 import com.arjunpathak.opentune.player.PlayerController
 import com.arjunpathak.opentune.ui.NowPlayingScreen
@@ -133,6 +136,25 @@ private fun OpenTuneApp() {
     val context = androidx.compose.ui.platform.LocalContext.current
     val player = remember(context) { PlayerController(context) }
 
+    DisposableEffect(player) {
+        onDispose { player.release() }
+    }
+
+    fun playLocalTrack(local: LocalTrack) {
+        current = DemoTrack(
+            Track(
+                id = local.id.toString(),
+                title = local.title,
+                artist = local.artist,
+                album = local.album,
+                uri = local.uri
+            ),
+            Color(0xFF5B4B8A)
+        )
+        player.play(current.track)
+        isPlaying = true
+    }
+
     if (showNowPlaying) {
         NowPlayingScreen(current.track.title, current.track.artist, isPlaying, onBack = { showNowPlaying = false }, onTogglePlay = {
             player.playPause()
@@ -155,7 +177,7 @@ private fun OpenTuneApp() {
             when (selectedTab) {
                 0 -> HomeScreen(current, isPlaying, onPlay = { selected -> current = selected; isPlaying = true; player.play(selected.track) })
                 1 -> PlaceholderScreen("Search", "Find songs, artists, albums and playlists")
-                else -> PlaceholderScreen("Your Library", "Your music, favorites and playlists")
+                2 -> LocalLibraryScreen(onTrackClick = ::playLocalTrack)
             }
             MiniPlayer(current, isPlaying, onOpen = { showNowPlaying = true }, onTogglePlay = {
                 player.playPause()
