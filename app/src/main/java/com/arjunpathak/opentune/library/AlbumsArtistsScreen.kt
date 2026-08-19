@@ -38,7 +38,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun AlbumsArtistsScreen(
     tracks: List<LocalTrack>,
-    onTrackClick: (LocalTrack) -> Unit
+    onTrackClick: (LocalTrack) -> Unit,
+    onAlbumClick: (Album) -> Unit
 ) {
     var tab by remember { mutableIntStateOf(0) }
     val albums = remember(tracks) { tracks.toAlbums() }
@@ -59,7 +60,7 @@ fun AlbumsArtistsScreen(
                 verticalArrangement = Arrangement.spacedBy(18.dp)
             ) {
                 items(albums, key = { it.key }) { album ->
-                    AlbumCard(album) { album.tracks.firstOrNull()?.let(onTrackClick) }
+                    AlbumCard(album) { onAlbumClick(album) }
                 }
             }
         } else {
