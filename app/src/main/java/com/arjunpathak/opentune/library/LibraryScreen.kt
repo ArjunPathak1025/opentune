@@ -46,16 +46,16 @@ fun LocalLibraryScreen(
     val loading by viewModel.isLoading.collectAsState()
     var tab by remember { mutableIntStateOf(0) }
     var selectedAlbum by remember { mutableStateOf<Album?>(null) }
+    var selectedArtist by remember { mutableStateOf<Artist?>(null) }
 
     LaunchedEffect(Unit) { viewModel.refresh() }
 
     if (selectedAlbum != null) {
-        AlbumDetailScreen(
-            album = selectedAlbum!!,
-            onBack = { selectedAlbum = null },
-            onPlayTrack = onTrackClick,
-            onPlayAll = onPlayAlbum
-        )
+        AlbumDetailScreen(selectedAlbum!!, { selectedAlbum = null }, onTrackClick, onPlayAlbum)
+        return
+    }
+    if (selectedArtist != null) {
+        ArtistDetailScreen(selectedArtist!!, { selectedArtist = null }, onTrackClick, onPlayAlbum)
         return
     }
 
@@ -67,13 +67,11 @@ fun LocalLibraryScreen(
             }
             IconButton(onClick = viewModel::refresh) { Icon(Icons.Default.Refresh, "Refresh library") }
         }
-
         TabRow(selectedTabIndex = tab) {
             Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Songs") })
             Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Albums") })
             Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Artists") })
         }
-
         if (loading) {
             Spacer(Modifier.size(24.dp))
             CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
@@ -100,7 +98,8 @@ fun LocalLibraryScreen(
             AlbumsArtistsScreen(
                 tracks = tracks,
                 onTrackClick = onTrackClick,
-                onAlbumClick = { selectedAlbum = it }
+                onAlbumClick = { selectedAlbum = it },
+                onArtistClick = { selectedArtist = it }
             )
         }
     }
