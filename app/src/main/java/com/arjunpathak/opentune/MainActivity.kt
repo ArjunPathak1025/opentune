@@ -27,6 +27,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
@@ -47,6 +48,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -61,8 +64,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.arjunpathak.opentune.library.FavoritesScreen
+import com.arjunpathak.opentune.library.FavoritesStore
+import com.arjunpathak.opentune.library.LibraryViewModel
 import com.arjunpathak.opentune.library.LocalLibraryScreen
 import com.arjunpathak.opentune.library.LocalTrack
+import com.arjunpathak.opentune.library.SearchScreen
 import com.arjunpathak.opentune.model.Track
 import com.arjunpathak.opentune.player.PlayerController
 import com.arjunpathak.opentune.ui.NowPlayingScreen
@@ -119,6 +127,12 @@ private fun OpenTuneApp() {
     var showNowPlaying by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val player = remember(context) { PlayerController(context) }
+    val libraryViewModel: LibraryViewModel = viewModel()
+    val tracks by libraryViewModel.tracks.collectAsState()
+    val favoritesStore = remember(context) { FavoritesStore(context) }
+    var favoriteIds by remember { mutableStateOf(favoritesStore.getIds()) }
+
+    LaunchedEffect(Unit) { libraryViewModel.refresh() }
     DisposableEffect(player) { onDispose { player.release() } }
 
     fun toDemo(local: LocalTrack) = DemoTrack(
@@ -130,11 +144,14 @@ private fun OpenTuneApp() {
         player.play(current.track)
         isPlaying = true
     }
-    fun playLocalAlbum(tracks: List<LocalTrack>) {
-        val first = tracks.firstOrNull() ?: return
+    fun playLocalAlbum(tracksToPlay: List<LocalTrack>) {
+        val first = tracksToPlay.firstOrNull() ?: return
         current = toDemo(first)
-        player.playAll(tracks.map { toDemo(it).track })
+        player.playAll(tracksToPlay.map { toDemo(it).track })
         isPlaying = true
+    }
+    fun toggleFavorite(track: LocalTrack) {
+        favoriteIds = favoritesStore.toggle(track.id)
     }
 
     if (showNowPlaying) {
@@ -152,14 +169,16 @@ private fun OpenTuneApp() {
                 NavigationBarItem(selected = selectedTab == 0, onClick = { selectedTab = 0 }, icon = { Icon(Icons.Default.Home, null) }, label = { Text("Home") })
                 NavigationBarItem(selected = selectedTab == 1, onClick = { selectedTab = 1 }, icon = { Icon(Icons.Default.Search, null) }, label = { Text("Search") })
                 NavigationBarItem(selected = selectedTab == 2, onClick = { selectedTab = 2 }, icon = { Icon(Icons.Default.LibraryMusic, null) }, label = { Text("Library") })
+                NavigationBarItem(selected = selectedTab == 3, onClick = { selectedTab = 3 }, icon = { Icon(if (favoriteIds.isEmpty()) Icons.Default.FavoriteBorder else Icons.Default.Favorite, null) }, label = { Text("Favorites") })
             }
         }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             when (selectedTab) {
-                0 -> HomeScreen(current, isPlaying, onPlay = { selected -> current = selected; isPlaying = true; player.play(selected.track) })
-                1 -> PlaceholderScreen("Search", "Find songs, artists, albums and playlists")
-                2 -> LocalLibraryScreen(onTrackClick = ::playLocalTrack, onPlayAlbum = ::playLocalAlbum)
+                0 -> HomeScreen(current, isPlaying, favoriteIds.isNotEmpty(), onOpenFavorites = { selectedTab = 3 }, onPlay = { selected -> current = selected; isPlaying = true; player.play(selected.track) })
+                1 -> SearchScreen(tracks, favoriteIds, ::playLocalTrack, ::toggleFavorite)
+                2 -> LocalLibraryScreen(onTrackClick = ::playLocalTrack, onPlayAlbum = ::playLocalAlbum, viewModel = libraryViewModel)
+                3 -> FavoritesScreen(tracks, favoriteIds, ::playLocalTrack, ::toggleFavorite)
             }
             MiniPlayer(current, isPlaying, onOpen = { showNowPlaying = true }, onTogglePlay = { player.playPause(); isPlaying = !isPlaying })
         }
@@ -167,11 +186,11 @@ private fun OpenTuneApp() {
 }
 
 @Composable
-private fun HomeScreen(current: DemoTrack, isPlaying: Boolean, onPlay: (DemoTrack) -> Unit) {
+private fun HomeScreen(current: DemoTrack, isPlaying: Boolean, hasFavorites: Boolean, onOpenFavorites: () -> Unit, onPlay: (DemoTrack) -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) { Text("Good evening", style = MaterialTheme.typography.labelLarge); Text("Discover", fontSize = 30.sp, fontWeight = FontWeight.Bold) }
-            IconButton(onClick = {}) { Icon(Icons.Default.FavoriteBorder, "Favorites") }
+            IconButton(onClick = onOpenFavorites) { Icon(if (hasFavorites) Icons.Default.Favorite else Icons.Default.FavoriteBorder, "Favorites") }
             IconButton(onClick = {}) { Icon(Icons.Default.MoreVert, "More") }
         }
         Card(Modifier.fillMaxWidth().height(190.dp), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Color.Transparent)) {
@@ -223,9 +242,4 @@ private fun MiniPlayer(item: DemoTrack, isPlaying: Boolean, onOpen: () -> Unit, 
             IconButton(onClick = onTogglePlay) { Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, "Play or pause") }
         }
     }
-}
-
-@Composable
-private fun PlaceholderScreen(title: String, subtitle: String) {
-    Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) { Text(title, fontSize = 30.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.height(8.dp)); Text(subtitle, style = MaterialTheme.typography.bodyLarge) }
 }
