@@ -9,23 +9,76 @@ import androidx.media3.session.SessionToken
 import com.arjunpathak.opentune.model.Track
 import com.google.common.util.concurrent.ListenableFuture
 
+/** UI-side controller for the app-wide Media3 playback session. */
 class PlayerController(context: Context) {
     private val controllerFuture: ListenableFuture<MediaController> =
-        MediaController.Builder(context, SessionToken(context, ComponentName(context, PlaybackService::class.java))).buildAsync()
+        MediaController.Builder(
+            context,
+            SessionToken(context, ComponentName(context, PlaybackService::class.java))
+        ).buildAsync()
+
+    data class PlaybackState(
+        val isPlaying: Boolean,
+        val track: Track?
+    )
 
     private fun mediaItem(track: Track): MediaItem = MediaItem.Builder()
         .setMediaId(track.id)
         .setUri(track.uri)
-        .setMediaMetadata(androidx.media3.common.MediaMetadata.Builder()
-            .setTitle(track.title)
-            .setArtist(track.artist)
-            .setAlbumTitle(track.album)
-            .setArtworkUri(track.artworkUri?.let(android.net.Uri::parse))
-            .build())
+        .setMediaMetadata(
+            androidx.media3.common.MediaMetadata.Builder()
+                .setTitle(track.title)
+                .setArtist(track.artist)
+                .setAlbumTitle(track.album)
+                .setArtworkUri(track.artworkUri?.let(android.net.Uri::parse))
+                .build()
+        )
         .build()
 
+    private fun trackFrom(controller: MediaController): Track? {
+        val item = controller.currentMediaItem ?: return null
+        val metadata = item.mediaMetadata
+        return Track(
+            id = item.mediaId,
+            title = metadata.title?.toString().orEmpty(),
+            artist = metadata.artist?.toString().orEmpty(),
+            album = metadata.albumTitle?.toString().orEmpty(),
+            uri = item.localConfiguration?.uri?.toString().orEmpty(),
+            artworkUri = metadata.artworkUri?.toString()
+        )
+    }
+
     private fun withController(action: (MediaController) -> Unit) {
-        controllerFuture.addListener({ action(controllerFuture.get()) }, { it.run() })
+        controllerFuture.addListener(
+            { action(controllerFuture.get()) },
+            { it.run() }
+        )
+    }
+
+    /** Keeps Compose UI synchronized when playback changes in the background/lock screen. */
+    fun observe(listener: (PlaybackState) -> Unit): () -> Unit {
+        val controllerListener = object : Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                listener(PlaybackState(isPlaying, trackFrom(controllerFuture.get())))
+            }
+
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                listener(PlaybackState(controllerFuture.get().isPlaying, trackFrom(controllerFuture.get())))
+            }
+
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                listener(PlaybackState(controllerFuture.get().isPlaying, trackFrom(controllerFuture.get())))
+            }
+        }
+
+        withController { controller ->
+            controller.addListener(controllerListener)
+            listener(PlaybackState(controller.isPlaying, trackFrom(controller)))
+        }
+
+        return {
+            withController { it.removeListener(controllerListener) }
+        }
     }
 
     fun play(track: Track) = withController { controller ->
@@ -43,14 +96,21 @@ class PlayerController(context: Context) {
         }
     }
 
-    fun playPause() = withController { controller -> if (controller.isPlaying) controller.pause() else controller.play() }
+    fun playPause() = withController { controller ->
+        if (controller.isPlaying) controller.pause() else controller.play()
+    }
+
     fun next() = withController { it.seekToNextMediaItem() }
     fun previous() = withController { it.seekToPreviousMediaItem() }
     fun seekTo(positionMs: Long) = withController { it.seekTo(positionMs) }
+
     fun seekFraction(fraction: Float) = withController { controller ->
         val duration = controller.duration
-        if (duration > 0) controller.seekTo((duration * fraction.coerceIn(0f, 1f)).toLong())
+        if (duration > 0) {
+            controller.seekTo((duration * fraction.coerceIn(0f, 1f)).toLong())
+        }
     }
+
     fun setShuffleEnabled(enabled: Boolean) = withController { it.shuffleModeEnabled = enabled }
     fun setRepeatMode(mode: Int) = withController { it.repeatMode = mode }
     fun currentPosition(onResult: (Long) -> Unit) = withController { onResult(it.currentPosition) }
@@ -58,13 +118,14 @@ class PlayerController(context: Context) {
 
     fun queue(onResult: (items: List<Track>, currentIndex: Int) -> Unit) = withController { controller ->
         val items = (0 until controller.mediaItemCount).map { index ->
-            val metadata = controller.getMediaItemAt(index).mediaMetadata
+            val item = controller.getMediaItemAt(index)
+            val metadata = item.mediaMetadata
             Track(
-                id = controller.getMediaItemAt(index).mediaId,
+                id = item.mediaId,
                 title = metadata.title?.toString().orEmpty(),
                 artist = metadata.artist?.toString().orEmpty(),
                 album = metadata.albumTitle?.toString().orEmpty(),
-                uri = controller.getMediaItemAt(index).localConfiguration?.uri?.toString().orEmpty(),
+                uri = item.localConfiguration?.uri?.toString().orEmpty(),
                 artworkUri = metadata.artworkUri?.toString()
             )
         }
