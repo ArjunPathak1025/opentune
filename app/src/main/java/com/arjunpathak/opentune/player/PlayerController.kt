@@ -15,22 +15,33 @@ class PlayerController(context: Context) {
             SessionToken(context, ComponentName(context, PlaybackService::class.java))
         ).buildAsync()
 
+    private fun mediaItem(track: Track): MediaItem =
+        MediaItem.Builder()
+            .setMediaId(track.id)
+            .setUri(track.uri)
+            .setMediaMetadata(
+                androidx.media3.common.MediaMetadata.Builder()
+                    .setTitle(track.title)
+                    .setArtist(track.artist)
+                    .setAlbumTitle(track.album)
+                    .build()
+            )
+            .build()
+
     fun play(track: Track) {
         controllerFuture.addListener({
             val controller = controllerFuture.get()
-            controller.setMediaItem(
-                MediaItem.Builder()
-                    .setMediaId(track.id)
-                    .setUri(track.uri)
-                    .setMediaMetadata(
-                        androidx.media3.common.MediaMetadata.Builder()
-                            .setTitle(track.title)
-                            .setArtist(track.artist)
-                            .setAlbumTitle(track.album)
-                            .build()
-                    )
-                    .build()
-            )
+            controller.setMediaItem(mediaItem(track))
+            controller.prepare()
+            controller.play()
+        }, { it.run() })
+    }
+
+    fun playAll(tracks: List<Track>) {
+        if (tracks.isEmpty()) return
+        controllerFuture.addListener({
+            val controller = controllerFuture.get()
+            controller.setMediaItems(tracks.map(::mediaItem))
             controller.prepare()
             controller.play()
         }, { it.run() })
