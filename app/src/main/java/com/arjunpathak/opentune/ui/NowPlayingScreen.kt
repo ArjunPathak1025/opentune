@@ -59,6 +59,12 @@ fun NowPlayingScreen(
     var progress by remember { mutableFloatStateOf(0.35f) }
     var shuffleEnabled by remember { mutableStateOf(false) }
     var repeatMode by remember { mutableIntStateOf(PlayerController.REPEAT_OFF) }
+    var showQueue by remember { mutableStateOf(false) }
+
+    if (showQueue) {
+        QueueScreen(onBack = { showQueue = false })
+        return
+    }
 
     fun cycleRepeat() {
         repeatMode = when (repeatMode) {
@@ -87,7 +93,7 @@ fun NowPlayingScreen(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("Seek", style = MaterialTheme.typography.labelSmall); Text("Queue controls below", style = MaterialTheme.typography.labelSmall) }
         }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
-            IconButton(onClick = onOpenQueue) { Icon(Icons.Default.QueueMusic, "Queue") }
+            IconButton(onClick = { showQueue = true; onOpenQueue() }) { Icon(Icons.Default.QueueMusic, "Queue") }
             IconButton(onClick = { shuffleEnabled = !shuffleEnabled; onShuffle(shuffleEnabled) }) { Icon(Icons.Default.Shuffle, "Shuffle", tint = if (shuffleEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface) }
             IconButton(onClick = onPrevious) { Icon(Icons.Default.FastRewind, "Previous") }
             IconButton(onClick = onTogglePlay, modifier = Modifier.size(72.dp)) { Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, "Play or pause", modifier = Modifier.size(42.dp)) }
