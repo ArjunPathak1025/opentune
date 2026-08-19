@@ -111,14 +111,9 @@ private fun PermissionGate(content: @Composable () -> Unit) {
             Spacer(Modifier.height(20.dp))
             Text("Let OpenTune access your music", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(10.dp))
-            Text(
-                "OpenTune needs music access to find songs stored on this device. Your library stays on your device unless you explicitly use an online feature.",
-                style = MaterialTheme.typography.bodyLarge
-            )
+            Text("OpenTune needs music access to find songs stored on this device. Your library stays on your device unless you explicitly use an online feature.", style = MaterialTheme.typography.bodyLarge)
             Spacer(Modifier.height(24.dp))
-            Button(onClick = { launcher.launch(musicPermission()) }) {
-                Text(if (requested) "Allow music access" else "Continue")
-            }
+            Button(onClick = { launcher.launch(musicPermission()) }) { Text(if (requested) "Allow music access" else "Continue") }
             if (requested) {
                 Spacer(Modifier.height(12.dp))
                 Text("Music access is required for your local library.", style = MaterialTheme.typography.bodySmall)
@@ -136,22 +131,23 @@ private fun OpenTuneApp() {
     val context = androidx.compose.ui.platform.LocalContext.current
     val player = remember(context) { PlayerController(context) }
 
-    DisposableEffect(player) {
-        onDispose { player.release() }
-    }
+    DisposableEffect(player) { onDispose { player.release() } }
+
+    fun toDemo(local: LocalTrack) = DemoTrack(
+        Track(id = local.id.toString(), title = local.title, artist = local.artist, album = local.album, uri = local.uri),
+        Color(0xFF5B4B8A)
+    )
 
     fun playLocalTrack(local: LocalTrack) {
-        current = DemoTrack(
-            Track(
-                id = local.id.toString(),
-                title = local.title,
-                artist = local.artist,
-                album = local.album,
-                uri = local.uri
-            ),
-            Color(0xFF5B4B8A)
-        )
+        current = toDemo(local)
         player.play(current.track)
+        isPlaying = true
+    }
+
+    fun playLocalAlbum(tracks: List<LocalTrack>) {
+        val first = tracks.firstOrNull() ?: return
+        current = toDemo(first)
+        player.playAll(tracks.map { local -> toDemo(local).track })
         isPlaying = true
     }
 
@@ -177,7 +173,7 @@ private fun OpenTuneApp() {
             when (selectedTab) {
                 0 -> HomeScreen(current, isPlaying, onPlay = { selected -> current = selected; isPlaying = true; player.play(selected.track) })
                 1 -> PlaceholderScreen("Search", "Find songs, artists, albums and playlists")
-                2 -> LocalLibraryScreen(onTrackClick = ::playLocalTrack)
+                2 -> LocalLibraryScreen(onTrackClick = ::playLocalTrack, onPlayAlbum = ::playLocalAlbum)
             }
             MiniPlayer(current, isPlaying, onOpen = { showNowPlaying = true }, onTogglePlay = {
                 player.playPause()
