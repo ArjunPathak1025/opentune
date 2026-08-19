@@ -130,7 +130,8 @@ private fun OpenTuneApp() {
     var isPlaying by remember { mutableStateOf(false) }
     var current by remember { mutableStateOf(demoTracks.first()) }
     var showNowPlaying by remember { mutableStateOf(false) }
-    val player = remember { PlayerController(androidx.compose.ui.platform.LocalContext.current) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val player = remember(context) { PlayerController(context) }
 
     if (showNowPlaying) {
         NowPlayingScreen(current.track.title, current.track.artist, isPlaying, onBack = { showNowPlaying = false }, onTogglePlay = {
