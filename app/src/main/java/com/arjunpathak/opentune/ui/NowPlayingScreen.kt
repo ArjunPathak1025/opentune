@@ -1,6 +1,5 @@
 package com.arjunpathak.opentune.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,16 +25,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.arjunpathak.opentune.library.AlbumArtwork
 
 @Composable
 fun NowPlayingScreen(
     title: String,
     artist: String,
     isPlaying: Boolean,
+    artworkUri: String? = null,
     onBack: () -> Unit,
     onTogglePlay: () -> Unit
 ) {
@@ -48,13 +48,13 @@ fun NowPlayingScreen(
             Text("Now Playing", Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
             IconButton(onClick = {}) { Icon(Icons.Default.MoreVert, "More") }
         }
-
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Spacer(Modifier.size(16.dp))
-            androidx.compose.foundation.layout.Box(
-                Modifier.fillMaxWidth().size(320.dp).clip(RoundedCornerShape(32.dp)).background(Color(0xFF5B4B8A)),
-                contentAlignment = Alignment.Center
-            ) { Text("♪", color = Color.White, fontSize = 100.sp) }
+            AlbumArtwork(
+                artworkUri = artworkUri,
+                contentDescription = title,
+                modifier = Modifier.fillMaxWidth().size(320.dp).clip(RoundedCornerShape(32.dp))
+            )
             Spacer(Modifier.size(26.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -69,7 +69,6 @@ fun NowPlayingScreen(
                 Text("3:48", style = MaterialTheme.typography.labelSmall)
             }
         }
-
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
             IconButton(onClick = {}) { Icon(Icons.Default.QueueMusic, "Queue") }
             IconButton(onClick = {}) { Icon(Icons.Default.ArrowBack, "Previous") }
