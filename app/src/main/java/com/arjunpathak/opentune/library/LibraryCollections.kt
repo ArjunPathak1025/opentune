@@ -10,5 +10,8 @@ fun List<LocalTrack>.toAlbums(): List<Album> =
 
 fun List<LocalTrack>.toArtists(): List<Artist> =
     groupBy { it.artist.ifBlank { "Unknown artist" } }
-        .map { (name, tracks) -> Artist(name, tracks.size) }
+        .map { (name, tracks) ->
+            val firstArtwork = tracks.firstOrNull { !it.artworkUri.isNullOrBlank() }?.artworkUri
+            Artist(name, tracks.size, firstArtwork, tracks.sortedBy { it.title.lowercase() })
+        }
         .sortedBy { it.name.lowercase() }
