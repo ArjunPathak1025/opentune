@@ -93,20 +93,12 @@ private fun PermissionGate(content: @Composable () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var granted by remember { mutableStateOf(ContextCompat.checkSelfPermission(context, musicPermission()) == PackageManager.PERMISSION_GRANTED) }
     var requested by remember { mutableStateOf(false) }
-
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
         granted = isGranted
         requested = true
     }
-
-    if (granted) {
-        content()
-    } else {
-        Column(
-            Modifier.fillMaxSize().padding(28.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+    if (granted) content() else {
+        Column(Modifier.fillMaxSize().padding(28.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(Icons.Default.LibraryMusic, null, Modifier.size(72.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(20.dp))
             Text("Let OpenTune access your music", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
@@ -114,10 +106,7 @@ private fun PermissionGate(content: @Composable () -> Unit) {
             Text("OpenTune needs music access to find songs stored on this device. Your library stays on your device unless you explicitly use an online feature.", style = MaterialTheme.typography.bodyLarge)
             Spacer(Modifier.height(24.dp))
             Button(onClick = { launcher.launch(musicPermission()) }) { Text(if (requested) "Allow music access" else "Continue") }
-            if (requested) {
-                Spacer(Modifier.height(12.dp))
-                Text("Music access is required for your local library.", style = MaterialTheme.typography.bodySmall)
-            }
+            if (requested) { Spacer(Modifier.height(12.dp)); Text("Music access is required for your local library.", style = MaterialTheme.typography.bodySmall) }
         }
     }
 }
@@ -130,29 +119,26 @@ private fun OpenTuneApp() {
     var showNowPlaying by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val player = remember(context) { PlayerController(context) }
-
     DisposableEffect(player) { onDispose { player.release() } }
 
     fun toDemo(local: LocalTrack) = DemoTrack(
-        Track(id = local.id.toString(), title = local.title, artist = local.artist, album = local.album, uri = local.uri),
+        Track(id = local.id.toString(), title = local.title, artist = local.artist, album = local.album, uri = local.uri, artworkUri = local.artworkUri),
         Color(0xFF5B4B8A)
     )
-
     fun playLocalTrack(local: LocalTrack) {
         current = toDemo(local)
         player.play(current.track)
         isPlaying = true
     }
-
     fun playLocalAlbum(tracks: List<LocalTrack>) {
         val first = tracks.firstOrNull() ?: return
         current = toDemo(first)
-        player.playAll(tracks.map { local -> toDemo(local).track })
+        player.playAll(tracks.map { toDemo(it).track })
         isPlaying = true
     }
 
     if (showNowPlaying) {
-        NowPlayingScreen(current.track.title, current.track.artist, isPlaying, onBack = { showNowPlaying = false }, onTogglePlay = {
+        NowPlayingScreen(current.track.title, current.track.artist, isPlaying, current.track.artworkUri, { showNowPlaying = false }, {
             player.playPause()
             isPlaying = !isPlaying
         })
@@ -175,10 +161,7 @@ private fun OpenTuneApp() {
                 1 -> PlaceholderScreen("Search", "Find songs, artists, albums and playlists")
                 2 -> LocalLibraryScreen(onTrackClick = ::playLocalTrack, onPlayAlbum = ::playLocalAlbum)
             }
-            MiniPlayer(current, isPlaying, onOpen = { showNowPlaying = true }, onTogglePlay = {
-                player.playPause()
-                isPlaying = !isPlaying
-            })
+            MiniPlayer(current, isPlaying, onOpen = { showNowPlaying = true }, onTogglePlay = { player.playPause(); isPlaying = !isPlaying })
         }
     }
 }
