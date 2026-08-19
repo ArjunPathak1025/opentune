@@ -24,6 +24,7 @@ class PlayerController(context: Context) {
                     .setTitle(track.title)
                     .setArtist(track.artist)
                     .setAlbumTitle(track.album)
+                    .setArtworkUri(track.artworkUri?.let(android.net.Uri::parse))
                     .build()
             )
             .build()
