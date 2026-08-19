@@ -14,13 +14,27 @@ import android.net.Uri
  */
 interface YouTubeMusicProvider {
     fun openSearch(context: Context, query: String)
+    fun openHome(context: Context)
 }
 
 class OfficialYouTubeMusicProvider : YouTubeMusicProvider {
+    private fun openOfficial(context: Context, uri: Uri) {
+        val appIntent = Intent(Intent.ACTION_VIEW, uri)
+            .setPackage("com.google.android.apps.youtube.music")
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            context.startActivity(appIntent)
+        } catch (_: Exception) {
+            context.startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+    }
+
     override fun openSearch(context: Context, query: String) {
         val encoded = Uri.encode(query)
-        val appIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://music.youtube.com/search?q=$encoded"))
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(appIntent)
+        openOfficial(context, Uri.parse("https://music.youtube.com/search?q=$encoded"))
+    }
+
+    override fun openHome(context: Context) {
+        openOfficial(context, Uri.parse("https://music.youtube.com/"))
     }
 }
