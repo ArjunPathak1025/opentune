@@ -67,9 +67,12 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.arjunpathak.opentune.library.FavoritesScreen
 import com.arjunpathak.opentune.library.FavoritesStore
+import com.arjunpathak.opentune.library.HistoryStore
 import com.arjunpathak.opentune.library.LibraryViewModel
 import com.arjunpathak.opentune.library.LocalLibraryScreen
 import com.arjunpathak.opentune.library.LocalTrack
+import com.arjunpathak.opentune.library.PlaylistStore
+import com.arjunpathak.opentune.library.PlaylistsScreen
 import com.arjunpathak.opentune.library.SearchScreen
 import com.arjunpathak.opentune.model.Track
 import com.arjunpathak.opentune.player.PlayerController
@@ -123,15 +126,30 @@ private fun OpenTuneApp() {
     val libraryViewModel: LibraryViewModel = viewModel()
     val tracks by libraryViewModel.tracks.collectAsState()
     val favoritesStore = remember(context) { FavoritesStore(context) }
+    val playlistStore = remember(context) { PlaylistStore(context) }
+    val historyStore = remember(context) { HistoryStore(context) }
     var favoriteIds by remember { mutableStateOf(favoritesStore.getIds()) }
 
     LaunchedEffect(Unit) { libraryViewModel.refresh() }
     DisposableEffect(player) { onDispose { player.release() } }
 
     fun toDemo(local: LocalTrack) = DemoTrack(Track(id = local.id.toString(), title = local.title, artist = local.artist, album = local.album, uri = local.uri, artworkUri = local.artworkUri), Color(0xFF5B4B8A))
-    fun playLocalTrack(local: LocalTrack) { current = toDemo(local); player.play(current.track); isPlaying = true }
-    fun playLocalAlbum(tracksToPlay: List<LocalTrack>) { val first = tracksToPlay.firstOrNull() ?: return; current = toDemo(first); player.playAll(tracksToPlay.map { toDemo(it).track }); isPlaying = true }
+    fun playLocalTrack(local: LocalTrack) {
+        current = toDemo(local)
+        player.play(current.track)
+        historyStore.record(local.id)
+        isPlaying = true
+    }
+    fun playLocalAlbum(tracksToPlay: List<LocalTrack>) {
+        val first = tracksToPlay.firstOrNull() ?: return
+        current = toDemo(first)
+        player.playAll(tracksToPlay.map { toDemo(it).track })
+        historyStore.record(first.id)
+        isPlaying = true
+    }
     fun toggleFavorite(track: LocalTrack) { favoriteIds = favoritesStore.toggle(track.id) }
+
+    val recentTracks = historyStore.getIds().mapNotNull { id -> tracks.firstOrNull { it.id == id } }
 
     if (showNowPlaying) {
         NowPlayingScreen(
@@ -157,17 +175,19 @@ private fun OpenTuneApp() {
             NavigationBarItem(selected = selectedTab == 1, onClick = { selectedTab = 1 }, icon = { Icon(Icons.Default.Search, null) }, label = { Text("Search") })
             NavigationBarItem(selected = selectedTab == 2, onClick = { selectedTab = 2 }, icon = { Icon(Icons.Default.LibraryMusic, null) }, label = { Text("Library") })
             NavigationBarItem(selected = selectedTab == 3, onClick = { selectedTab = 3 }, icon = { Icon(if (favoriteIds.isEmpty()) Icons.Default.FavoriteBorder else Icons.Default.Favorite, null) }, label = { Text("Favorites") })
+            NavigationBarItem(selected = selectedTab == 4, onClick = { selectedTab = 4 }, icon = { Icon(Icons.Default.LibraryMusic, null) }, label = { Text("Playlists") })
         }
     }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             when (selectedTab) {
-                0 -> HomeScreen(current, isPlaying, favoriteIds.isNotEmpty(), onOpenFavorites = { selectedTab = 3 }, onPlay = { selected -> current = selected; isPlaying = true; player.play(selected.track) })
+                0 -> HomeScreen(current, isPlaying, favoriteIds.isNotEmpty(), recentTracks, onOpenFavorites = { selectedTab = 3 }, onPlay = { selected -> current = selected; isPlaying = true; player.play(selected.track) })
                 1 -> Column(Modifier.fillMaxSize()) {
                     YouTubeMusicSearchCard(onSearch = { youtubeMusic.openSearch(context, it) }, onOpenHome = { youtubeMusic.openHome(context) })
                     SearchScreen(tracks, favoriteIds, ::playLocalTrack, ::toggleFavorite)
                 }
                 2 -> LocalLibraryScreen(onTrackClick = ::playLocalTrack, onPlayAlbum = ::playLocalAlbum, viewModel = libraryViewModel)
                 3 -> FavoritesScreen(tracks, favoriteIds, ::playLocalTrack, ::toggleFavorite)
+                4 -> PlaylistsScreen(tracks, playlistStore, ::playLocalTrack, ::playLocalAlbum)
             }
             MiniPlayer(current, isPlaying, onOpen = { showNowPlaying = true }, onTogglePlay = { player.playPause(); isPlaying = !isPlaying })
         }
@@ -175,7 +195,7 @@ private fun OpenTuneApp() {
 }
 
 @Composable
-private fun HomeScreen(current: DemoTrack, isPlaying: Boolean, hasFavorites: Boolean, onOpenFavorites: () -> Unit, onPlay: (DemoTrack) -> Unit) {
+private fun HomeScreen(current: DemoTrack, isPlaying: Boolean, hasFavorites: Boolean, recentTracks: List<LocalTrack>, onOpenFavorites: () -> Unit, onPlay: (DemoTrack) -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) { Text("Good evening", style = MaterialTheme.typography.labelLarge); Text("Discover", fontSize = 30.sp, fontWeight = FontWeight.Bold) }
@@ -187,6 +207,10 @@ private fun HomeScreen(current: DemoTrack, isPlaying: Boolean, hasFavorites: Boo
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) { Text("OPENTUNE PICKS", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold); Text("Fresh music for your evening", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Bold); Text("A mix of discoveries and favorites", color = Color.White.copy(alpha = .8f)); Surface(shape = RoundedCornerShape(50), color = Color.White) { Text("Start listening", Modifier.padding(horizontal = 18.dp, vertical = 10.dp), fontWeight = FontWeight.SemiBold) } }
             }
         }
+        if (recentTracks.isNotEmpty()) {
+            Text("Recently played", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) { items(recentTracks.take(10)) { track -> TrackCard(toDemoTrack(track), onPlay) } }
+        }
         Text("Quick picks", fontSize = 20.sp, fontWeight = FontWeight.Bold)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) { items(demoTracks) { TrackCard(it, onPlay) } }
         Text("Made for you", fontSize = 20.sp, fontWeight = FontWeight.Bold)
@@ -197,6 +221,8 @@ private fun HomeScreen(current: DemoTrack, isPlaying: Boolean, hasFavorites: Boo
         if (isPlaying) Text("Playing", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
     }
 }
+
+private fun toDemoTrack(local: LocalTrack) = DemoTrack(Track(id = local.id.toString(), title = local.title, artist = local.artist, album = local.album, uri = local.uri, artworkUri = local.artworkUri), Color(0xFF5B4B8A))
 
 @Composable
 private fun TrackCard(item: DemoTrack, onPlay: (DemoTrack) -> Unit) {
