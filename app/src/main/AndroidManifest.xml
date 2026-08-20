@@ -11,6 +11,7 @@
         android:label="OpenTune"
         android:supportsRtl="true"
         android:theme="@style/Theme.OpenTune">
+        <activity android:name=".settings.SettingsActivity" android:exported="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true">
