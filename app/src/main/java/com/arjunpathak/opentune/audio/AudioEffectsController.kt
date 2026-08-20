@@ -21,16 +21,12 @@ class AudioEffectsController(private var audioSessionId: Int) {
         }
     }
 
-    fun setBandLevel(band: Short, level: Short) {
-        runCatching { equalizer?.setBandLevel(band, level) }
-    }
+    fun setBandLevel(band: Short, level: Short) { runCatching { equalizer?.setBandLevel(band, level) } }
+    fun setBassStrength(strength: Short) { runCatching { bassBoost?.setStrength(strength) } }
+    fun setVirtualizerStrength(strength: Short) { runCatching { virtualizer?.setStrength(strength) } }
 
-    fun setBassStrength(strength: Short) {
-        runCatching { bassBoost?.setStrength(strength) }
-    }
-
-    fun setVirtualizerStrength(strength: Short) {
-        runCatching { virtualizer?.setStrength(strength) }
+    fun applyPreset(preset: EqualizerPreset) {
+        preset.levels.forEachIndexed { index, level -> setBandLevel(index.toShort(), level.toShort()) }
     }
 
     fun release() {
