@@ -38,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.background
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -66,6 +67,12 @@ fun NowPlayingScreen(
     var progress by remember { mutableFloatStateOf(0.35f) }
     var shuffleEnabled by remember { mutableStateOf(false) }
     var repeatMode by remember { mutableIntStateOf(PlayerController.REPEAT_OFF) }
+    var showQueue by remember { mutableStateOf(false) }
+
+    if (showQueue) {
+        QueueScreen(onBack = { showQueue = false })
+        return
+    }
 
     fun cycleRepeat() {
         repeatMode = when (repeatMode) {
@@ -194,7 +201,10 @@ fun NowPlayingScreen(
             }
 
             Surface(
-                onClick = onOpenQueue,
+                onClick = {
+                    showQueue = true
+                    onOpenQueue()
+                },
                 shape = RoundedCornerShape(18.dp),
                 color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
             ) {
