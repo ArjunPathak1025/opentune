@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.arjunpathak.opentune.library.AlbumArtwork
 import com.arjunpathak.opentune.library.FavoritesScreen
 import com.arjunpathak.opentune.library.FavoritesStore
 import com.arjunpathak.opentune.library.HistoryStore
@@ -227,7 +228,16 @@ private fun toDemoTrack(local: LocalTrack) = DemoTrack(Track(id = local.id.toStr
 @Composable
 private fun TrackCard(item: DemoTrack, onPlay: (DemoTrack) -> Unit) {
     Column(Modifier.width(150.dp).clickable { onPlay(item) }) {
-        Box(Modifier.size(150.dp).clip(RoundedCornerShape(20.dp)).background(item.color)) { Text("♪", Modifier.align(Alignment.Center), color = Color.White, fontSize = 52.sp); Surface(Modifier.align(Alignment.BottomEnd).padding(8.dp), shape = RoundedCornerShape(50), color = Color.White) { Icon(Icons.Default.PlayArrow, "Play", Modifier.padding(7.dp).size(20.dp)) } }
+        Box(Modifier.size(150.dp)) {
+            AlbumArtwork(
+                artworkUri = item.track.artworkUri,
+                contentDescription = item.track.album ?: item.track.title,
+                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(20.dp))
+            )
+            Surface(Modifier.align(Alignment.BottomEnd).padding(8.dp), shape = RoundedCornerShape(50), color = Color.White) {
+                Icon(Icons.Default.PlayArrow, "Play", Modifier.padding(7.dp).size(20.dp))
+            }
+        }
         Spacer(Modifier.height(8.dp)); Text(item.track.title, fontWeight = FontWeight.SemiBold, maxLines = 1); Text(item.track.artist, style = MaterialTheme.typography.bodySmall, maxLines = 1)
     }
 }
@@ -239,5 +249,14 @@ private fun PlaylistRow(title: String, subtitle: String) {
 
 @Composable
 private fun MiniPlayer(item: DemoTrack, isPlaying: Boolean, onOpen: () -> Unit, onTogglePlay: () -> Unit) {
-    Surface(shadowElevation = 8.dp) { Row(Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(48.dp).clip(RoundedCornerShape(10.dp)).background(item.color), contentAlignment = Alignment.Center) { Text("♪", color = Color.White, fontSize = 22.sp) }; Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text(item.track.title, fontWeight = FontWeight.SemiBold, maxLines = 1); Text(item.track.artist, style = MaterialTheme.typography.bodySmall, maxLines = 1) }; IconButton(onClick = onTogglePlay) { Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, "Play or pause") } } }
+    Surface(shadowElevation = 8.dp) {
+        Row(Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            AlbumArtwork(
+                artworkUri = item.track.artworkUri,
+                contentDescription = item.track.album ?: item.track.title,
+                modifier = Modifier.size(48.dp).clip(RoundedCornerShape(10.dp))
+            )
+            Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text(item.track.title, fontWeight = FontWeight.SemiBold, maxLines = 1); Text(item.track.artist, style = MaterialTheme.typography.bodySmall, maxLines = 1) }; IconButton(onClick = onTogglePlay) { Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, "Play or pause") }
+        }
+    }
 }
