@@ -29,7 +29,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun SettingsScreen(
     store: SettingsStore,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onDarkModeChanged: (Boolean) -> Unit
 ) {
     var darkMode by remember { mutableStateOf(store.isDarkMode()) }
     var quality by remember { mutableStateOf(store.getPlaybackQuality()) }
@@ -47,7 +48,11 @@ fun SettingsScreen(
                     Text("Dark mode", style = MaterialTheme.typography.titleMedium)
                     Text("Use a darker OpenTune appearance", style = MaterialTheme.typography.bodySmall)
                 }
-                Switch(checked = darkMode, onCheckedChange = { darkMode = it; store.setDarkMode(it) })
+                Switch(checked = darkMode, onCheckedChange = {
+                    darkMode = it
+                    store.setDarkMode(it)
+                    onDarkModeChanged(it)
+                })
             }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -57,7 +62,11 @@ fun SettingsScreen(
                 IconButton(onClick = { menuOpen = true }) { Icon(Icons.Default.Settings, "Choose quality") }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                     listOf("Low", "Standard", "High", "Very high").forEach { option ->
-                        DropdownMenuItem(text = { Text(option) }, onClick = { quality = option; store.setPlaybackQuality(option); menuOpen = false })
+                        DropdownMenuItem(text = { Text(option) }, onClick = {
+                            quality = option
+                            store.setPlaybackQuality(option)
+                            menuOpen = false
+                        })
                     }
                 }
             }
