@@ -10,8 +10,12 @@ class SettingsActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val store = SettingsStore(this)
         setContent {
-            OpenTuneTheme {
-                SettingsScreen(store = store, onBack = { finish() })
+            OpenTuneTheme(darkTheme = store.isDarkMode()) {
+                SettingsScreen(
+                    store = store,
+                    onBack = { finish() },
+                    onDarkModeChanged = { recreate() }
+                )
             }
         }
     }
