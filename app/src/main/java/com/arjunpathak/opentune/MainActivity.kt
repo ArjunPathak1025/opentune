@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -77,6 +78,8 @@ import com.arjunpathak.opentune.library.PlaylistsScreen
 import com.arjunpathak.opentune.library.SearchScreen
 import com.arjunpathak.opentune.model.Track
 import com.arjunpathak.opentune.player.PlayerController
+import com.arjunpathak.opentune.settings.SettingsScreen
+import com.arjunpathak.opentune.settings.SettingsStore
 import com.arjunpathak.opentune.ui.NowPlayingScreen
 import com.arjunpathak.opentune.ui.theme.OpenTuneTheme
 import com.arjunpathak.opentune.youtube.OfficialYouTubeMusicProvider
@@ -94,7 +97,16 @@ private val demoTracks = listOf(
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { OpenTuneTheme { PermissionGate { OpenTuneApp() } } }
+        setContent {
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val settingsStore = remember(context) { SettingsStore(context) }
+            var darkMode by remember { mutableStateOf(settingsStore.isDarkMode()) }
+            OpenTuneTheme(darkTheme = darkMode) {
+                PermissionGate {
+                    OpenTuneApp(onDarkModeChanged = { darkMode = it })
+                }
+            }
+        }
     }
 }
 
@@ -116,11 +128,12 @@ private fun PermissionGate(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun OpenTuneApp() {
+private fun OpenTuneApp(onDarkModeChanged: (Boolean) -> Unit) {
     var selectedTab by remember { mutableIntStateOf(0) }
     var isPlaying by remember { mutableStateOf(false) }
     var current by remember { mutableStateOf(demoTracks.first()) }
     var showNowPlaying by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val player = remember(context) { PlayerController(context) }
     val youtubeMusic = remember { OfficialYouTubeMusicProvider() }
@@ -129,6 +142,7 @@ private fun OpenTuneApp() {
     val favoritesStore = remember(context) { FavoritesStore(context) }
     val playlistStore = remember(context) { PlaylistStore(context) }
     val historyStore = remember(context) { HistoryStore(context) }
+    val settingsStore = remember(context) { SettingsStore(context) }
     var favoriteIds by remember { mutableStateOf(favoritesStore.getIds()) }
 
     LaunchedEffect(Unit) { libraryViewModel.refresh() }
@@ -172,6 +186,15 @@ private fun OpenTuneApp() {
         return
     }
 
+    if (showSettings) {
+        SettingsScreen(
+            store = settingsStore,
+            onBack = { showSettings = false },
+            onDarkModeChanged = onDarkModeChanged
+        )
+        return
+    }
+
     Scaffold(modifier = Modifier.fillMaxSize(), bottomBar = {
         NavigationBar {
             NavigationBarItem(selected = selectedTab == 0, onClick = { selectedTab = 0 }, icon = { Icon(Icons.Default.Home, null) }, label = { Text("Home") })
@@ -192,6 +215,7 @@ private fun OpenTuneApp() {
                     libraryTracks = tracks,
                     onOpenFavorites = { selectedTab = 3 },
                     onOpenPlaylists = { selectedTab = 4 },
+                    onOpenSettings = { showSettings = true },
                     onPlay = { selected -> current = selected; isPlaying = true; player.play(selected.track) }
                 )
                 1 -> Column(Modifier.fillMaxSize()) {
@@ -217,6 +241,7 @@ private fun HomeScreen(
     libraryTracks: List<LocalTrack>,
     onOpenFavorites: () -> Unit,
     onOpenPlaylists: () -> Unit,
+    onOpenSettings: () -> Unit,
     onPlay: (DemoTrack) -> Unit
 ) {
     val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
@@ -227,6 +252,7 @@ private fun HomeScreen(
                 Text(greeting, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Your music", fontSize = 30.sp, fontWeight = FontWeight.Bold)
             }
+            IconButton(onClick = onOpenSettings) { Icon(Icons.Default.Settings, "Settings") }
             IconButton(onClick = onOpenFavorites) { Icon(if (favoriteTracks.isEmpty()) Icons.Default.FavoriteBorder else Icons.Default.Favorite, "Favorites") }
             IconButton(onClick = onOpenPlaylists) { Icon(Icons.Default.LibraryMusic, "Playlists") }
         }
