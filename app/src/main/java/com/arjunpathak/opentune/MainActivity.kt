@@ -151,6 +151,8 @@ private fun OpenTuneApp() {
     fun toggleFavorite(track: LocalTrack) { favoriteIds = favoritesStore.toggle(track.id) }
 
     val recentTracks = historyStore.getIds().mapNotNull { id -> tracks.firstOrNull { it.id == id } }
+    val favoriteTracks = favoriteIds.mapNotNull { id -> tracks.firstOrNull { it.id == id } }
+    val playlists = playlistStore.getPlaylists()
 
     if (showNowPlaying) {
         NowPlayingScreen(
@@ -181,7 +183,17 @@ private fun OpenTuneApp() {
     }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             when (selectedTab) {
-                0 -> HomeScreen(current, isPlaying, favoriteIds.isNotEmpty(), recentTracks, onOpenFavorites = { selectedTab = 3 }, onPlay = { selected -> current = selected; isPlaying = true; player.play(selected.track) })
+                0 -> HomeScreen(
+                    current = current,
+                    isPlaying = isPlaying,
+                    recentTracks = recentTracks,
+                    favoriteTracks = favoriteTracks,
+                    playlists = playlists,
+                    libraryTracks = tracks,
+                    onOpenFavorites = { selectedTab = 3 },
+                    onOpenPlaylists = { selectedTab = 4 },
+                    onPlay = { selected -> current = selected; isPlaying = true; player.play(selected.track) }
+                )
                 1 -> Column(Modifier.fillMaxSize()) {
                     YouTubeMusicSearchCard(onSearch = { youtubeMusic.openSearch(context, it) }, onOpenHome = { youtubeMusic.openHome(context) })
                     SearchScreen(tracks, favoriteIds, ::playLocalTrack, ::toggleFavorite)
@@ -196,30 +208,86 @@ private fun OpenTuneApp() {
 }
 
 @Composable
-private fun HomeScreen(current: DemoTrack, isPlaying: Boolean, hasFavorites: Boolean, recentTracks: List<LocalTrack>, onOpenFavorites: () -> Unit, onPlay: (DemoTrack) -> Unit) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
+private fun HomeScreen(
+    current: DemoTrack,
+    isPlaying: Boolean,
+    recentTracks: List<LocalTrack>,
+    favoriteTracks: List<LocalTrack>,
+    playlists: Map<String, List<Long>>,
+    libraryTracks: List<LocalTrack>,
+    onOpenFavorites: () -> Unit,
+    onOpenPlaylists: () -> Unit,
+    onPlay: (DemoTrack) -> Unit
+) {
+    val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+    val greeting = when (hour) { in 5..11 -> "Good morning"; in 12..17 -> "Good afternoon"; else -> "Good evening" }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) { Text("Good evening", style = MaterialTheme.typography.labelLarge); Text("Discover", fontSize = 30.sp, fontWeight = FontWeight.Bold) }
-            IconButton(onClick = onOpenFavorites) { Icon(if (hasFavorites) Icons.Default.Favorite else Icons.Default.FavoriteBorder, "Favorites") }
-            IconButton(onClick = {}) { Icon(Icons.Default.MoreVert, "More") }
+            Column(Modifier.weight(1f)) {
+                Text(greeting, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Your music", fontSize = 30.sp, fontWeight = FontWeight.Bold)
+            }
+            IconButton(onClick = onOpenFavorites) { Icon(if (favoriteTracks.isEmpty()) Icons.Default.FavoriteBorder else Icons.Default.Favorite, "Favorites") }
+            IconButton(onClick = onOpenPlaylists) { Icon(Icons.Default.LibraryMusic, "Playlists") }
         }
+
         Card(Modifier.fillMaxWidth().height(190.dp), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Color.Transparent)) {
             Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF6C4AB6), Color(0xFF1F6E8C)))).padding(24.dp)) {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) { Text("OPENTUNE PICKS", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold); Text("Fresh music for your evening", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Bold); Text("A mix of discoveries and favorites", color = Color.White.copy(alpha = .8f)); Surface(shape = RoundedCornerShape(50), color = Color.White) { Text("Start listening", Modifier.padding(horizontal = 18.dp, vertical = 10.dp), fontWeight = FontWeight.SemiBold) } }
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("OPENTUNE", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(if (favoriteTracks.isNotEmpty()) "Back to your favorites" else "Start your music journey", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+                    Text(if (favoriteTracks.isNotEmpty()) "Pick up a song you already love" else "Build your library, discover music and make it yours", color = Color.White.copy(alpha = .82f), maxLines = 2)
+                    Surface(shape = RoundedCornerShape(50), color = Color.White) {
+                        Text("${if (favoriteTracks.isNotEmpty()) "Play favorites" else "Explore library"}", Modifier.padding(horizontal = 18.dp, vertical = 10.dp), fontWeight = FontWeight.SemiBold, color = Color(0xFF24202E))
+                    }
+                }
             }
         }
+
         if (recentTracks.isNotEmpty()) {
-            Text("Recently played", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            HomeSectionTitle("Recently played")
             LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) { items(recentTracks.take(10)) { track -> TrackCard(toDemoTrack(track), onPlay) } }
         }
-        Text("Quick picks", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+
+        if (favoriteTracks.isNotEmpty()) {
+            HomeSectionTitle("Your favorites", onMore = onOpenFavorites)
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) { items(favoriteTracks.take(10)) { track -> TrackCard(toDemoTrack(track), onPlay) } }
+        }
+
+        HomeSectionTitle("Quick picks")
         LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) { items(demoTracks) { TrackCard(it, onPlay) } }
-        Text("Made for you", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        PlaylistRow("Daily Discovery", "A fresh selection based on your listening")
-        PlaylistRow("Late Night", "Chill sounds for the last hours of the day")
-        PlaylistRow("New Releases", "Explore what is new")
-        Text("Currently playing: ${current.track.title}", style = MaterialTheme.typography.labelMedium)
-        if (isPlaying) Text("Playing", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+
+        if (playlists.isNotEmpty()) {
+            HomeSectionTitle("Your playlists", onMore = onOpenPlaylists)
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                items(playlists.entries.toList()) { (name, ids) ->
+                    val first = ids.asSequence().mapNotNull { id -> libraryTracks.firstOrNull { it.id == id } }.firstOrNull()
+                    PlaylistCard(name = name, track = first, onPlay = if (first != null) ({ onPlay(toDemoTrack(first)) }) else null)
+                }
+            }
+        }
+
+        HomeSectionTitle("Made for you")
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            items(listOf("Daily Discovery", "Late Night", "New Releases")) { title ->
+                CuratedCard(title, when (title) { "Daily Discovery" -> "A fresh mix for today"; "Late Night" -> "Chill sounds after dark"; else -> "Explore something new" })
+            }
+        }
+
+        Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .55f)) {
+            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) { Text(current.track.title, fontWeight = FontWeight.SemiBold, maxLines = 1); Text(if (isPlaying) "Playing now" else "Ready to play", style = MaterialTheme.typography.bodySmall) }
+                Icon(Icons.Default.PlayArrow, null, tint = MaterialTheme.colorScheme.primary)
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeSectionTitle(title: String, onMore: (() -> Unit)? = null) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+        if (onMore != null) Text("See all", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { onMore() }.padding(4.dp))
     }
 }
 
@@ -229,33 +297,37 @@ private fun toDemoTrack(local: LocalTrack) = DemoTrack(Track(id = local.id.toStr
 private fun TrackCard(item: DemoTrack, onPlay: (DemoTrack) -> Unit) {
     Column(Modifier.width(150.dp).clickable { onPlay(item) }) {
         Box(Modifier.size(150.dp)) {
-            AlbumArtwork(
-                artworkUri = item.track.artworkUri,
-                contentDescription = item.track.album ?: item.track.title,
-                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(20.dp))
-            )
-            Surface(Modifier.align(Alignment.BottomEnd).padding(8.dp), shape = RoundedCornerShape(50), color = Color.White) {
-                Icon(Icons.Default.PlayArrow, "Play", Modifier.padding(7.dp).size(20.dp))
-            }
+            AlbumArtwork(artworkUri = item.track.artworkUri, contentDescription = item.track.album ?: item.track.title, modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(20.dp)))
+            Surface(Modifier.align(Alignment.BottomEnd).padding(8.dp), shape = RoundedCornerShape(50), color = Color.White) { Icon(Icons.Default.PlayArrow, "Play", Modifier.padding(7.dp).size(20.dp), tint = Color(0xFF24202E)) }
         }
         Spacer(Modifier.height(8.dp)); Text(item.track.title, fontWeight = FontWeight.SemiBold, maxLines = 1); Text(item.track.artist, style = MaterialTheme.typography.bodySmall, maxLines = 1)
     }
 }
 
 @Composable
-private fun PlaylistRow(title: String, subtitle: String) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(64.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) { Text("♫", fontSize = 25.sp) }; Spacer(Modifier.width(14.dp)); Column(Modifier.weight(1f)) { Text(title, fontWeight = FontWeight.SemiBold); Text(subtitle, style = MaterialTheme.typography.bodySmall) }; IconButton(onClick = {}) { Icon(Icons.Default.MoreVert, "More") } }
+private fun PlaylistCard(name: String, track: LocalTrack?, onPlay: (() -> Unit)?) {
+    Column(Modifier.width(180.dp)) {
+        Box(Modifier.size(180.dp).clip(RoundedCornerShape(20.dp)).clickable(enabled = onPlay != null) { onPlay?.invoke() }) {
+            if (track != null) AlbumArtwork(track.artworkUri, name, Modifier.fillMaxSize()) else Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) { Icon(Icons.Default.LibraryMusic, null, Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+            Surface(Modifier.align(Alignment.BottomEnd).padding(8.dp), shape = RoundedCornerShape(50), color = Color.White) { Icon(Icons.Default.PlayArrow, "Play playlist", Modifier.padding(7.dp).size(20.dp), tint = Color(0xFF24202E)) }
+        }
+        Spacer(Modifier.height(8.dp)); Text(name, fontWeight = FontWeight.SemiBold, maxLines = 1); Text("Playlist", style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+@Composable
+private fun CuratedCard(title: String, subtitle: String) {
+    Column(Modifier.width(180.dp)) {
+        Box(Modifier.size(180.dp).clip(RoundedCornerShape(20.dp)).background(Brush.linearGradient(listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.tertiaryContainer))), contentAlignment = Alignment.Center) { Text("♫", fontSize = 52.sp, color = MaterialTheme.colorScheme.onPrimaryContainer) }
+        Spacer(Modifier.height(8.dp)); Text(title, fontWeight = FontWeight.SemiBold, maxLines = 1); Text(subtitle, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+    }
 }
 
 @Composable
 private fun MiniPlayer(item: DemoTrack, isPlaying: Boolean, onOpen: () -> Unit, onTogglePlay: () -> Unit) {
     Surface(shadowElevation = 8.dp) {
         Row(Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            AlbumArtwork(
-                artworkUri = item.track.artworkUri,
-                contentDescription = item.track.album ?: item.track.title,
-                modifier = Modifier.size(48.dp).clip(RoundedCornerShape(10.dp))
-            )
+            AlbumArtwork(artworkUri = item.track.artworkUri, contentDescription = item.track.album ?: item.track.title, modifier = Modifier.size(48.dp).clip(RoundedCornerShape(10.dp)))
             Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text(item.track.title, fontWeight = FontWeight.SemiBold, maxLines = 1); Text(item.track.artist, style = MaterialTheme.typography.bodySmall, maxLines = 1) }; IconButton(onClick = onTogglePlay) { Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, "Play or pause") }
         }
     }
