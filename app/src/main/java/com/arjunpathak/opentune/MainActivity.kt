@@ -57,7 +57,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -75,6 +75,8 @@ import com.arjunpathak.opentune.model.Track
 import com.arjunpathak.opentune.player.PlayerController
 import com.arjunpathak.opentune.ui.NowPlayingScreen
 import com.arjunpathak.opentune.ui.theme.OpenTuneTheme
+import com.arjunpathak.opentune.youtube.OfficialYouTubeMusicProvider
+import com.arjunpathak.opentune.youtube.YouTubeMusicSearchCard
 
 private data class DemoTrack(val track: Track, val color: Color)
 
@@ -117,6 +119,7 @@ private fun OpenTuneApp() {
     var showNowPlaying by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val player = remember(context) { PlayerController(context) }
+    val youtubeMusic = remember { OfficialYouTubeMusicProvider() }
     val libraryViewModel: LibraryViewModel = viewModel()
     val tracks by libraryViewModel.tracks.collectAsState()
     val favoritesStore = remember(context) { FavoritesStore(context) }
@@ -159,7 +162,10 @@ private fun OpenTuneApp() {
         Column(Modifier.fillMaxSize().padding(padding)) {
             when (selectedTab) {
                 0 -> HomeScreen(current, isPlaying, favoriteIds.isNotEmpty(), onOpenFavorites = { selectedTab = 3 }, onPlay = { selected -> current = selected; isPlaying = true; player.play(selected.track) })
-                1 -> SearchScreen(tracks, favoriteIds, ::playLocalTrack, ::toggleFavorite)
+                1 -> Column(Modifier.fillMaxSize()) {
+                    YouTubeMusicSearchCard(onSearch = { youtubeMusic.openSearch(context, it) }, onOpenHome = { youtubeMusic.openHome(context) })
+                    SearchScreen(tracks, favoriteIds, ::playLocalTrack, ::toggleFavorite)
+                }
                 2 -> LocalLibraryScreen(onTrackClick = ::playLocalTrack, onPlayAlbum = ::playLocalAlbum, viewModel = libraryViewModel)
                 3 -> FavoritesScreen(tracks, favoriteIds, ::playLocalTrack, ::toggleFavorite)
             }
