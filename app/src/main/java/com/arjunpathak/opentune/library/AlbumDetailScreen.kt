@@ -34,15 +34,16 @@ fun AlbumDetailScreen(
     Column(Modifier.padding(20.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") }
-            Text("Album", style = MaterialTheme.typography.labelLarge)
+            Column(Modifier.weight(1f)) {
+                Text("Album", style = MaterialTheme.typography.labelLarge)
+                Text(album.title, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+            }
         }
 
         AlbumArtwork(
             artworkUri = album.artworkUri,
             contentDescription = album.title,
-            modifier = Modifier
-                .size(240.dp)
-                .align(Alignment.CenterHorizontally)
+            modifier = Modifier.size(240.dp).align(Alignment.CenterHorizontally)
         )
         Spacer(Modifier.height(16.dp))
         Text(album.title, style = MaterialTheme.typography.headlineMedium)
@@ -50,9 +51,14 @@ fun AlbumDetailScreen(
         Text("${album.tracks.size} songs", style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(14.dp))
 
-        Button(onClick = { onPlayAll(album.tracks) }, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Default.PlayArrow, null)
-            Text("  Play all")
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Button(onClick = { onPlayAll(album.tracks) }, modifier = Modifier.weight(1f)) {
+                Icon(Icons.Default.PlayArrow, null)
+                Text("  Play all")
+            }
+            Button(onClick = { onPlayAll(album.tracks.shuffled()) }, modifier = Modifier.weight(1f)) {
+                Text("Shuffle")
+            }
         }
         Spacer(Modifier.height(12.dp))
 
