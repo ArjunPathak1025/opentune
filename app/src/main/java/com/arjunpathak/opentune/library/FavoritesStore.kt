@@ -5,19 +5,22 @@ import android.content.Context
 class FavoritesStore(context: Context) {
     private val prefs = context.getSharedPreferences("favorites", Context.MODE_PRIVATE)
 
-    fun getIds(): Set<Long> = prefs.getStringSet(KEY, emptySet())
+    fun getIds(): List<Long> = prefs.getStringSet(KEY, emptySet())
         ?.mapNotNull { it.toLongOrNull() }
-        ?.toSet()
-        ?: emptySet()
+        ?.sorted()
+        ?: emptyList()
 
     fun contains(id: Long): Boolean = getIds().contains(id)
 
-    fun toggle(id: Long): Set<Long> {
+    fun toggle(id: Long): List<Long> {
         val ids = getIds().toMutableSet()
         if (!ids.add(id)) ids.remove(id)
-        prefs.edit().putStringSet(KEY, ids.map(Long::toString).toSet()).apply()
-        return ids
+        val saved = ids.map(Long::toString).toSet()
+        prefs.edit().putStringSet(KEY, saved).apply()
+        return ids.sorted()
     }
+
+    fun clear() = prefs.edit().remove(KEY).apply()
 
     companion object { private const val KEY = "track_ids" }
 }
