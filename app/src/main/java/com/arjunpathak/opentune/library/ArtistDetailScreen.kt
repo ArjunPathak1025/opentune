@@ -33,16 +33,24 @@ fun ArtistDetailScreen(
     Column(Modifier.padding(20.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") }
-            Text("Artist", style = MaterialTheme.typography.labelLarge)
+            Column(Modifier.weight(1f)) {
+                Text("Artist", style = MaterialTheme.typography.labelLarge)
+                Text(artist.name, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+            }
         }
         AlbumArtwork(artist.artworkUri, artist.name, Modifier.size(220.dp).align(Alignment.CenterHorizontally))
         Spacer(Modifier.size(16.dp))
         Text(artist.name, style = MaterialTheme.typography.headlineMedium)
         Text("${artist.trackCount} songs", style = MaterialTheme.typography.bodyMedium)
         Spacer(Modifier.size(14.dp))
-        Button(onClick = { onPlayAll(artist.tracks) }, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Default.PlayArrow, null)
-            Text("  Play all")
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Button(onClick = { onPlayAll(artist.tracks) }, modifier = Modifier.weight(1f)) {
+                Icon(Icons.Default.PlayArrow, null)
+                Text("  Play all")
+            }
+            Button(onClick = { onPlayAll(artist.tracks.shuffled()) }, modifier = Modifier.weight(1f)) {
+                Text("Shuffle")
+            }
         }
         Spacer(Modifier.size(12.dp))
         LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
