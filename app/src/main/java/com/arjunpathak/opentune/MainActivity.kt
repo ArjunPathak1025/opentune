@@ -196,7 +196,7 @@ private fun OpenTuneApp() {
                 )
                 1 -> Column(Modifier.fillMaxSize()) {
                     YouTubeMusicSearchCard(onSearch = { youtubeMusic.openSearch(context, it) }, onOpenHome = { youtubeMusic.openHome(context) })
-                    SearchScreen(tracks, favoriteIds, ::playLocalTrack, ::toggleFavorite)
+                    SearchScreen(tracks, favoriteIds.toSet(), ::playLocalTrack, ::toggleFavorite)
                 }
                 2 -> LocalLibraryScreen(onTrackClick = ::playLocalTrack, onPlayAlbum = ::playLocalAlbum, viewModel = libraryViewModel)
                 3 -> FavoritesScreen(tracks, favoriteIds, ::playLocalTrack, ::toggleFavorite)
