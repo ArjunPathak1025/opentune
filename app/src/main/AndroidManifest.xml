@@ -11,9 +11,6 @@
         android:label="OpenTune"
         android:supportsRtl="true"
         android:theme="@style/Theme.OpenTune">
-        <meta-data
-            android:name="com.google.android.gms.car.application"
-            android:resource="@xml/automotive_app_desc" />
         <activity android:name=".settings.SettingsActivity" android:exported="false" />
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
