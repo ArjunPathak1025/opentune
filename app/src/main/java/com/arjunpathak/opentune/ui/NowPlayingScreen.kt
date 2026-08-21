@@ -38,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.background
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -47,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.arjunpathak.opentune.library.AlbumArtwork
 import com.arjunpathak.opentune.player.PlayerController
+import com.arjunpathak.opentune.player.QueueScreen
 
 @Composable
 fun NowPlayingScreen(
@@ -54,6 +56,7 @@ fun NowPlayingScreen(
     artist: String,
     isPlaying: Boolean,
     artworkUri: String? = null,
+    player: PlayerController,
     onBack: () -> Unit,
     onTogglePlay: () -> Unit,
     onPrevious: () -> Unit,
@@ -69,7 +72,11 @@ fun NowPlayingScreen(
     var showQueue by remember { mutableStateOf(false) }
 
     if (showQueue) {
-        QueueScreen(onBack = { showQueue = false })
+        QueueScreen(
+            player = player,
+            onBack = { showQueue = false },
+            onPlayingChanged = { }
+        )
         return
     }
 
@@ -95,123 +102,60 @@ fun NowPlayingScreen(
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                }
+                IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") }
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("NOW PLAYING", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                     Text("OpenTune", style = MaterialTheme.typography.labelSmall)
                 }
-                IconButton(onClick = {}) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "More")
-                }
+                IconButton(onClick = {}) { Icon(Icons.Default.MoreVert, "More") }
             }
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 AlbumArtwork(
                     artworkUri = artworkUri,
                     contentDescription = title,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .size(300.dp)
-                        .clip(RoundedCornerShape(28.dp))
+                    modifier = Modifier.size(300.dp).clip(RoundedCornerShape(28.dp))
                 )
-
                 Spacer(Modifier.size(24.dp))
-
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(
-                            title,
-                            fontSize = 25.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Text(title, fontSize = 25.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Spacer(Modifier.size(3.dp))
-                        Text(
-                            artist,
-                            style = MaterialTheme.typography.bodyLarge,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Text(artist, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surface.copy(alpha = 0.75f)) {
-                        IconButton(onClick = {}) {
-                            Icon(Icons.Default.FavoriteBorder, contentDescription = "Favorite")
-                        }
+                        IconButton(onClick = {}) { Icon(Icons.Default.FavoriteBorder, "Favorite") }
                     }
                 }
-
                 Spacer(Modifier.size(14.dp))
-
-                Slider(
-                    value = progress,
-                    onValueChange = { progress = it },
-                    onValueChangeFinished = { onSeekFraction(progress) },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Slider(value = progress, onValueChange = { progress = it }, onValueChangeFinished = { onSeekFraction(progress) }, modifier = Modifier.fillMaxWidth())
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Playback", style = MaterialTheme.typography.labelSmall)
                     Text("${(progress * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
                 }
             }
 
-            Row(
-                Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
+            Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
                 IconButton(onClick = { shuffleEnabled = !shuffleEnabled; onShuffle(shuffleEnabled) }) {
-                    Icon(
-                        Icons.Default.Shuffle,
-                        contentDescription = "Shuffle",
-                        tint = if (shuffleEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                    )
+                    Icon(Icons.Default.Shuffle, "Shuffle", tint = if (shuffleEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
                 }
-                IconButton(onClick = onPrevious) {
-                    Icon(Icons.Default.FastRewind, contentDescription = "Previous", modifier = Modifier.size(30.dp))
+                IconButton(onClick = onPrevious) { Icon(Icons.Default.FastRewind, "Previous", Modifier.size(30.dp)) }
+                Surface(Modifier.size(72.dp), CircleShape, MaterialTheme.colorScheme.primary, shadowElevation = 6.dp) {
+                    IconButton(onClick = onTogglePlay) { Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, if (isPlaying) "Pause" else "Play", tint = Color.White, modifier = Modifier.size(38.dp)) }
                 }
-                Surface(
-                    modifier = Modifier.size(72.dp),
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary,
-                    shadowElevation = 6.dp
-                ) {
-                    IconButton(onClick = onTogglePlay) {
-                        Icon(
-                            if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = if (isPlaying) "Pause" else "Play",
-                            tint = Color.White,
-                            modifier = Modifier.size(38.dp)
-                        )
-                    }
-                }
-                IconButton(onClick = onNext) {
-                    Icon(Icons.Default.FastForward, contentDescription = "Next", modifier = Modifier.size(30.dp))
-                }
+                IconButton(onClick = onNext) { Icon(Icons.Default.FastForward, "Next", Modifier.size(30.dp)) }
                 IconButton(onClick = ::cycleRepeat) {
-                    Icon(
-                        Icons.Default.Repeat,
-                        contentDescription = "Repeat",
-                        tint = if (repeatMode != PlayerController.REPEAT_OFF) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                    )
+                    Icon(Icons.Default.Repeat, "Repeat", tint = if (repeatMode != PlayerController.REPEAT_OFF) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
                 }
             }
 
             Surface(
-                onClick = {
-                    showQueue = true
-                    onOpenQueue()
-                },
+                onClick = { showQueue = true; onOpenQueue() },
                 shape = RoundedCornerShape(18.dp),
                 color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
             ) {
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 13.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.QueueMusic, contentDescription = null)
+                Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.QueueMusic, null)
                     Spacer(Modifier.size(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text("Up Next", fontWeight = FontWeight.SemiBold)
