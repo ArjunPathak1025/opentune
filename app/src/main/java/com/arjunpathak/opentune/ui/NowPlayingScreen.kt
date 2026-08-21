@@ -1,4 +1,4 @@
-package com.arjunpathak.opentune.ui
+package com.arjunpathak1025.opentune.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +30,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -45,9 +46,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.arjunpathak.opentune.library.AlbumArtwork
-import com.arjunpathak.opentune.player.PlayerController
-import com.arjunpathak.opentune.player.QueueScreen
+import com.arjunpathak1025.opentune.library.AlbumArtwork
+import com.arjunpathak1025.opentune.player.PlayerController
+import com.arjunpathak1025.opentune.player.QueueScreen
+import kotlinx.coroutines.delay
+
+private fun formatTime(ms: Long): String {
+    val totalSeconds = (ms.coerceAtLeast(0L) / 1000L)
+    return "%d:%02d".format(totalSeconds / 60L, totalSeconds % 60L)
+}
 
 @Composable
 fun NowPlayingScreen(
@@ -65,10 +72,21 @@ fun NowPlayingScreen(
     onRepeat: (Int) -> Unit,
     onOpenQueue: () -> Unit
 ) {
-    var progress by remember { mutableFloatStateOf(0.35f) }
+    var progress by remember { mutableFloatStateOf(0f) }
+    var positionMs by remember { mutableStateOf(0L) }
+    var durationMs by remember { mutableStateOf(0L) }
     var shuffleEnabled by remember { mutableStateOf(false) }
     var repeatMode by remember { mutableIntStateOf(PlayerController.REPEAT_OFF) }
     var showQueue by remember { mutableStateOf(false) }
+
+    LaunchedEffect(player, isPlaying, title) {
+        while (true) {
+            player.currentPosition { positionMs = it }
+            player.duration { durationMs = it }
+            if (durationMs > 0L) progress = (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
+            delay(if (isPlaying) 500L else 1000L)
+        }
+    }
 
     if (showQueue) {
         QueueScreen(player = player, onBack = { showQueue = false }, onPlayingChanged = {})
@@ -84,12 +102,7 @@ fun NowPlayingScreen(
         onRepeat(repeatMode)
     }
 
-    val backgroundBrush = Brush.verticalGradient(
-        listOf(
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
-            MaterialTheme.colorScheme.background
-        )
-    )
+    val backgroundBrush = Brush.verticalGradient(listOf(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f), MaterialTheme.colorScheme.background))
 
     Box(Modifier.fillMaxSize().background(brush = backgroundBrush)) {
         Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 14.dp), verticalArrangement = Arrangement.SpaceBetween) {
@@ -107,7 +120,7 @@ fun NowPlayingScreen(
                 }
                 Spacer(Modifier.size(14.dp))
                 Slider(value = progress, onValueChange = { progress = it }, onValueChangeFinished = { onSeekFraction(progress) }, modifier = Modifier.fillMaxWidth())
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("Playback", style = MaterialTheme.typography.labelSmall); Text("${(progress * 100).toInt()}%", style = MaterialTheme.typography.labelSmall) }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(formatTime(positionMs), style = MaterialTheme.typography.labelSmall); Text(formatTime(durationMs), style = MaterialTheme.typography.labelSmall) }
             }
             Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
                 IconButton(onClick = { shuffleEnabled = !shuffleEnabled; onShuffle(shuffleEnabled) }) { Icon(Icons.Default.Shuffle, "Shuffle", tint = if (shuffleEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface) }
