@@ -2,6 +2,7 @@ package com.arjunpathak.opentune.player
 
 import android.app.PendingIntent
 import android.content.Intent
+import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
@@ -12,7 +13,7 @@ import com.arjunpathak.opentune.MainActivity
 import com.arjunpathak.opentune.audio.AudioEffectsController
 
 /** Background playback service. The UI talks to Media3 through the MediaSession. */
-@OptIn(UnstableApi::class)
+@OptIn(markerClass = UnstableApi::class)
 class PlaybackService : MediaSessionService() {
     private var player: ExoPlayer? = null
     private var mediaSession: MediaSession? = null
