@@ -4,16 +4,17 @@ import android.app.PendingIntent
 import android.content.Intent
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
-import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.arjunpathak.opentune.MainActivity
+import com.arjunpathak.opentune.audio.AudioEffectsController
 
 /** Background playback service. The UI talks to Media3 through the MediaSession. */
 class PlaybackService : MediaSessionService() {
     private var player: ExoPlayer? = null
     private var mediaSession: MediaSession? = null
+    private var audioEffects: AudioEffectsController? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -26,6 +27,11 @@ class PlaybackService : MediaSessionService() {
         player = ExoPlayer.Builder(this).build().apply {
             setAudioAttributes(audioAttributes, true)
             setHandleAudioBecomingNoisy(true)
+        }
+
+        // Effects are attached to the same audio session used by Media3 playback.
+        audioEffects = AudioEffectsController(player!!.audioSessionId).also {
+            it.attach(player!!.audioSessionId)
         }
 
         val sessionActivity = PendingIntent.getActivity(
@@ -43,8 +49,10 @@ class PlaybackService : MediaSessionService() {
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = mediaSession
 
     override fun onDestroy() {
+        audioEffects?.release()
+        audioEffects = null
         mediaSession?.run {
-            player.release()
+            player?.release()
             release()
         }
         mediaSession = null
