@@ -13,7 +13,7 @@ import com.arjunpathak.opentune.MainActivity
 import com.arjunpathak.opentune.audio.AudioEffectsController
 
 /** Background playback service. The UI talks to Media3 through the MediaSession. */
-@OptIn(markerClass = UnstableApi::class)
+@OptIn(markerClass = [UnstableApi::class])
 class PlaybackService : MediaSessionService() {
     private var player: ExoPlayer? = null
     private var mediaSession: MediaSession? = null
@@ -32,7 +32,6 @@ class PlaybackService : MediaSessionService() {
             setHandleAudioBecomingNoisy(true)
         }
 
-        // Effects are attached to the same audio session used by Media3 playback.
         audioEffects = AudioEffectsController(player!!.audioSessionId).also {
             it.attach(player!!.audioSessionId)
         }
