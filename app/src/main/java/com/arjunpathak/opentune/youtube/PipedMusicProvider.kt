@@ -20,7 +20,7 @@ class PipedMusicProvider(
         val url: String?
     )
 
-    suspend fun search(query: String): Result<List<Result>> = withContext(Dispatchers.IO) {
+    suspend fun search(query: String): kotlin.Result<List<Result>> = withContext(Dispatchers.IO) {
         runCatching {
             val encoded = URLEncoder.encode(query.trim(), Charsets.UTF_8.name())
             val connection = (URL("$apiBase/search?q=$encoded&filter=music_songs").openConnection() as HttpURLConnection).apply {
@@ -32,7 +32,7 @@ class PipedMusicProvider(
             connection.use { response ->
                 if (response.responseCode !in 200..299) error("Piped HTTP ${response.responseCode}")
                 val json = response.inputStream.bufferedReader().use { it.readText() }
-                val items = JSONObject(json).optJSONArray("items") ?: return@withContext Result.success(emptyList())
+                val items = JSONObject(json).optJSONArray("items") ?: return@withContext emptyList()
                 buildList {
                     for (i in 0 until items.length()) {
                         val item = items.optJSONObject(i) ?: continue
@@ -47,8 +47,8 @@ class PipedMusicProvider(
                             url = item.optString("url").takeIf { it.isNotBlank() }
                         ))
                     }
-                }.let { Result.success(it) }
+                }
             }
-        }.getOrElse { Result.failure(it) }
+        }
     }
 }
