@@ -84,9 +84,14 @@ fun NowPlayingScreen(
         onRepeat(repeatMode)
     }
 
-    val background = Brush.verticalGradient(listOf(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f), MaterialTheme.colorScheme.background))
+    val backgroundBrush = Brush.verticalGradient(
+        listOf(
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
+            MaterialTheme.colorScheme.background
+        )
+    )
 
-    Box(Modifier.fillMaxSize().background(background)) {
+    Box(Modifier.fillMaxSize().background(brush = backgroundBrush)) {
         Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 14.dp), verticalArrangement = Arrangement.SpaceBetween) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") }
